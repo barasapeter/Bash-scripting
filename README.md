@@ -1,322 +1,353 @@
-# FastAPI EC2 Deployment Automation
+# FastAPI Deployment - Quick Reference Cheat Sheet
 
-Automated deployment scripts for deploying FastAPI applications on AWS EC2 with PostgreSQL, Nginx, and SSL.
-
-## 📋 Prerequisites
-
-- AWS EC2 instance (Ubuntu 22.04 or 24.04)
-- Domain name pointed to your EC2 instance
-- Your FastAPI application code with `main.py` and `requirements.txt`
-
-## 🚀 Quick Start
-
-### 1. Prepare Your EC2 Instance
+## Initial Deployment
 
 ```bash
-# SSH into your EC2 instance
-ssh -i your-key.pem ubuntu@your-ec2-ip
-
-# Upload your application code to /home/ubuntu/cardlabsv3.0
-# You can use scp, git clone, or rsync
-```
-
-### 2. Upload Deployment Scripts
-
-```bash
-# From your local machine, upload the scripts
-scp -i your-key.pem deploy.sh deploy.config deploy_advanced.sh ubuntu@your-ec2-ip:~/
-```
-
-### 3. Configure Deployment Settings
-
-```bash
-# Edit the configuration file
+# 1. Upload your app code to /home/ubuntu/cardlabsv3.0
+# 2. Upload deployment scripts
+# 3. Configure
 nano deploy.config
-```
 
-Update these important values:
-- `DOMAIN`: Your domain name
-- `ADMIN_EMAIL`: Your email for Let's Encrypt
-- `DB_PASSWORD`: A secure database password
-- `APP_DIR`: Path to your application code
-
-### 4. Run Deployment
-
-**Option A: Simple Deployment**
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
-**Option B: Advanced Deployment (with pre-checks and rollback)**
-```bash
+# 4. Deploy
 chmod +x deploy_advanced.sh
 ./deploy_advanced.sh
 ```
 
-The advanced script includes:
-- Pre-deployment validation checks
-- Automatic backup of existing configuration
-- Rollback on failure
-- Post-deployment verification
+## Essential Commands
 
-## 📁 File Structure
-
-```
-/home/ubuntu/
-├── cardlabsv3.0/           # Your FastAPI application
-│   ├── main.py
-│   ├── requirements.txt
-│   ├── .env               # Created by script
-│   └── venv/              # Created by script
-├── deploy.sh              # Simple deployment script
-├── deploy_advanced.sh     # Advanced deployment with checks
-└── deploy.config          # Configuration file
-```
-
-## 🔧 Configuration File Options
-
+### Service Management
 ```bash
-# Application settings
-APP_NAME="cardlabsv3.0"
-APP_DIR="/home/ubuntu/cardlabsv3.0"
+# Start service
+sudo systemctl start fastapi
 
-# Domain settings
-DOMAIN="your-domain.com"
-WWW_DOMAIN="www.your-domain.com"
+# Stop service
+sudo systemctl stop fastapi
 
-# Database settings
-DB_NAME="cardlabs"
-DB_USER="postgres"
-DB_PASSWORD="secure-password-here"
-
-# Let's Encrypt settings
-ADMIN_EMAIL="admin@your-domain.com"
-
-# Gunicorn settings
-WORKERS=4
-WORKER_CLASS="uvicorn.workers.UvicornWorker"
-```
-
-## 🔄 Redeploying / Updating Your App
-
-When you need to update your application code:
-
-```bash
-# Pull latest code
-cd /home/ubuntu/cardlabsv3.0
-git pull  # or upload new code
-
-# Install any new dependencies
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Restart the service
+# Restart service
 sudo systemctl restart fastapi
 
 # Check status
 sudo systemctl status fastapi
-```
 
-Or use the automated redeploy script (see redeploy.sh).
-
-## 🐛 Troubleshooting
-
-### Check Service Status
-```bash
-sudo systemctl status fastapi
-sudo systemctl status nginx
-sudo systemctl status postgresql
+# Enable auto-start on boot
+sudo systemctl enable fastapi
 ```
 
 ### View Logs
 ```bash
-# FastAPI application logs
+# Live logs (Ctrl+C to exit)
 sudo journalctl -u fastapi -f
 
-# Nginx logs
-sudo tail -f /var/log/nginx/error.log
-sudo tail -f /var/log/nginx/access.log
+# Last 50 lines
+sudo journalctl -u fastapi -n 50
+
+# Only errors
+sudo journalctl -u fastapi -p err -n 50
+
+# Logs from today
+sudo journalctl -u fastapi --since today
+
+# Logs with timestamps
+sudo journalctl -u fastapi -o short-iso
 ```
 
-### Test Application Directly
+### Update Code
 ```bash
+# Quick update
 cd /home/ubuntu/cardlabsv3.0
+git pull
 source venv/bin/activate
-gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000
+pip install -r requirements.txt
+sudo systemctl restart fastapi
+
+# Or use the script
+./redeploy.sh
 ```
 
-### Database Issues
+### Database Operations
 ```bash
 # Connect to PostgreSQL
 sudo -u postgres psql
 
-# Check databases
-\l
+# Connect to specific database
+sudo -u postgres psql -d cardlabs
 
-# Connect to your database
-\c cardlabs
-
-# Check tables
-\dt
-```
-
-### SSL Certificate Issues
-```bash
-# Test certificate renewal
-sudo certbot renew --dry-run
-
-# Force certificate renewal
-sudo certbot renew --force-renewal
-```
-
-## 🛡️ Security Checklist
-
-After deployment, consider these security improvements:
-
-1. **Change default passwords**
-   ```bash
-   # Change PostgreSQL password
-   sudo -u postgres psql
-   ALTER USER postgres PASSWORD 'new-secure-password';
-   ```
-
-2. **Configure firewall**
-   ```bash
-   sudo ufw allow 22    # SSH
-   sudo ufw allow 80    # HTTP
-   sudo ufw allow 443   # HTTPS
-   sudo ufw enable
-   ```
-
-3. **Update .env with secure values**
-   ```bash
-   nano /home/ubuntu/cardlabsv3.0/.env
-   # Add SECRET_KEY, API_KEYS, etc.
-   ```
-
-4. **Regular updates**
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   ```
-
-## 📊 Monitoring
-
-### Check Resource Usage
-```bash
-# Memory usage
-free -h
-
-# Disk usage
-df -h
-
-# CPU usage
-top
-```
-
-### Monitor Application
-```bash
-# Real-time logs
-sudo journalctl -u fastapi -f
-
-# Recent errors
-sudo journalctl -u fastapi -p err -n 50
-```
-
-## 🔄 Backup & Recovery
-
-Backups are automatically created in `/tmp/deployment_backup_*` when using the advanced script.
-
-### Manual Backup
-```bash
 # Backup database
-sudo -u postgres pg_dump cardlabs > backup_$(date +%Y%m%d).sql
+sudo -u postgres pg_dump cardlabs > backup.sql
 
-# Backup application
-tar -czf app_backup_$(date +%Y%m%d).tar.gz /home/ubuntu/cardlabsv3.0
-```
-
-### Restore from Backup
-```bash
 # Restore database
-sudo -u postgres psql cardlabs < backup_20240101.sql
+sudo -u postgres psql cardlabs < backup.sql
+
+# PostgreSQL commands (inside psql):
+\l                  # List databases
+\c dbname           # Connect to database
+\dt                 # List tables
+\d tablename        # Describe table
+\q                  # Quit
 ```
 
-## 📝 Common Issues and Solutions
-
-### Issue: FastAPI service won't start
-**Solution:**
+### Nginx
 ```bash
-# Check for Python errors
-sudo journalctl -u fastapi -n 100
-
-# Verify virtual environment
-cd /home/ubuntu/cardlabsv3.0
-source venv/bin/activate
-python main.py  # Run directly to see errors
-```
-
-### Issue: Database connection failed
-**Solution:**
-```bash
-# Check PostgreSQL is running
-sudo systemctl status postgresql
-
-# Verify credentials in .env
-cat /home/ubuntu/cardlabsv3.0/.env
-
-# Test connection
-sudo -u postgres psql -c "SELECT 1"
-```
-
-### Issue: SSL certificate not working
-**Solution:**
-```bash
-# Check domain DNS
-nslookup your-domain.com
-
-# Verify nginx configuration
+# Test configuration
 sudo nginx -t
 
-# Check certbot logs
-sudo journalctl -u certbot -n 50
+# Reload configuration
+sudo systemctl reload nginx
+
+# Restart nginx
+sudo systemctl restart nginx
+
+# Check status
+sudo systemctl status nginx
+
+# View access logs
+sudo tail -f /var/log/nginx/access.log
+
+# View error logs
+sudo tail -f /var/log/nginx/error.log
 ```
 
-## 🎯 Performance Tuning
-
-### Adjust Gunicorn Workers
+### SSL/HTTPS
 ```bash
-# Edit systemd service
+# View certificate info
+sudo certbot certificates
+
+# Test renewal
+sudo certbot renew --dry-run
+
+# Force renewal
+sudo certbot renew --force-renewal
+
+# Check auto-renewal timer
+sudo systemctl status certbot.timer
+```
+
+## 🔧 Common Tasks
+
+### Edit Environment Variables
+```bash
+nano /home/ubuntu/cardlabsv3.0/.env
+sudo systemctl restart fastapi
+```
+
+### Update Python Dependencies
+```bash
+cd /home/ubuntu/cardlabsv3.0
+source venv/bin/activate
+pip install package-name
+pip freeze > requirements.txt
+sudo systemctl restart fastapi
+```
+
+### Change Number of Workers
+```bash
 sudo nano /etc/systemd/system/fastapi.service
-
-# Change -w value (recommended: 2-4 x CPU cores)
-ExecStart=... -w 8 ...
-
-# Reload and restart
+# Change -w 4 to desired number
 sudo systemctl daemon-reload
 sudo systemctl restart fastapi
 ```
 
-### Database Connection Pooling
-Add to your `.env`:
+### View System Resources
+```bash
+# Memory
+free -h
+
+# Disk
+df -h
+
+# CPU
+top
+htop  # if installed
+
+# Running processes
+ps aux | grep gunicorn
 ```
-DATABASE_POOL_SIZE=20
-DATABASE_MAX_OVERFLOW=10
+
+## Troubleshooting
+
+### Service Won't Start
+```bash
+# Check logs for errors
+sudo journalctl -u fastapi -n 100 --no-pager
+
+# Test manually
+cd /home/ubuntu/cardlabsv3.0
+source venv/bin/activate
+python main.py
+
+# Or test with gunicorn
+gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000
 ```
 
-## 📚 Additional Resources
+### Database Connection Issues
+```bash
+# Check if PostgreSQL is running
+sudo systemctl status postgresql
 
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Gunicorn Documentation](https://docs.gunicorn.org/)
-- [Nginx Documentation](https://nginx.org/en/docs/)
-- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+# Test connection
+sudo -u postgres psql -c "SELECT 1"
 
-## 🆘 Support
+# Check .env file
+cat /home/ubuntu/cardlabsv3.0/.env
+```
 
-If you encounter issues:
-1. Check the logs: `sudo journalctl -u fastapi -f`
-2. Verify all services are running: `sudo systemctl status fastapi nginx postgresql`
-3. Review the configuration: `nano deploy.config`
-4. Test connectivity: `curl http://localhost:8000`
-"# Bash-scripting" 
+### 502 Bad Gateway
+```bash
+# Check if app is running
+sudo systemctl status fastapi
+
+# Check nginx is running
+sudo systemctl status nginx
+
+# Test app directly
+curl http://localhost:8000
+
+# Check nginx error logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+### High Memory Usage
+```bash
+# Check processes
+ps aux --sort=-%mem | head -10
+
+# Reduce workers in systemd service
+sudo nano /etc/systemd/system/fastapi.service
+# Change -w 4 to -w 2
+sudo systemctl daemon-reload
+sudo systemctl restart fastapi
+```
+
+## Monitoring
+
+### Check if App is Responding
+```bash
+# Local test
+curl http://localhost:8000
+
+# Full test with headers
+curl -I https://your-domain.com
+
+# Response time
+curl -w "@-" -o /dev/null -s https://your-domain.com <<'EOF'
+     time_total:  %{time_total}s\n
+EOF
+```
+
+### Active Connections
+```bash
+# See active connections
+sudo netstat -tulpn | grep :8000
+
+# Count connections
+sudo netstat -an | grep :8000 | wc -l
+```
+
+## Security
+
+### Firewall Setup
+```bash
+sudo ufw allow 22
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
+sudo ufw status
+```
+
+### Change Database Password
+```bash
+sudo -u postgres psql
+ALTER USER postgres PASSWORD 'new-password';
+\q
+
+# Update .env file
+nano /home/ubuntu/cardlabsv3.0/.env
+# Change DATABASE_URL password
+sudo systemctl restart fastapi
+```
+
+### View Failed Login Attempts
+```bash
+sudo grep "Failed password" /var/log/auth.log | tail -20
+```
+
+## Important File Locations
+
+```
+/home/ubuntu/cardlabsv3.0/          # Application directory
+/home/ubuntu/cardlabsv3.0/.env      # Environment variables
+/home/ubuntu/cardlabsv3.0/venv/     # Virtual environment
+
+/etc/systemd/system/fastapi.service # Systemd service file
+/etc/nginx/sites-available/fastapi  # Nginx configuration
+
+/var/log/nginx/access.log           # Nginx access logs
+/var/log/nginx/error.log            # Nginx error logs
+
+/etc/letsencrypt/live/              # SSL certificates
+```
+
+## Backup & Restore
+
+### Full Backup
+```bash
+# Backup database
+sudo -u postgres pg_dump cardlabs > ~/backup_db_$(date +%Y%m%d).sql
+
+# Backup application
+tar -czf ~/backup_app_$(date +%Y%m%d).tar.gz /home/ubuntu/cardlabsv3.0
+
+# Backup configs
+sudo tar -czf ~/backup_configs_$(date +%Y%m%d).tar.gz \
+  /etc/systemd/system/fastapi.service \
+  /etc/nginx/sites-available/fastapi
+```
+
+### Restore
+```bash
+# Restore database
+sudo -u postgres psql cardlabs < ~/backup_db_20240101.sql
+
+# Restore application
+tar -xzf ~/backup_app_20240101.tar.gz -C /
+```
+
+## Tips
+
+1. **Always check logs first** when troubleshooting
+2. **Test changes** before restarting in production
+3. **Backup before updates** - use `./redeploy.sh` which does this automatically
+4. **Monitor disk space** - logs can fill up quickly
+5. **Keep dependencies updated** but test in staging first
+6. **Use environment variables** for sensitive data
+7. **Set up monitoring** with tools like Datadog, New Relic, or simple cron jobs
+
+## Emergency Recovery
+
+### App is Down - Quick Fix
+```bash
+sudo systemctl restart fastapi
+sudo systemctl restart nginx
+```
+
+### Complete Reset
+```bash
+# Stop everything
+sudo systemctl stop fastapi nginx
+
+# Check for stuck processes
+ps aux | grep gunicorn
+sudo killall gunicorn
+
+# Start fresh
+sudo systemctl start fastapi
+sudo systemctl start nginx
+```
+
+### Rollback to Previous Version
+```bash
+cd /home/ubuntu/cardlabsv3.0
+git log  # Find commit hash
+git checkout <commit-hash>
+./redeploy.sh
+```
