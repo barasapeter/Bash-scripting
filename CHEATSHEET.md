@@ -1,6 +1,6 @@
 # FastAPI Deployment - Quick Reference Cheat Sheet
 
-## 🚀 Initial Deployment
+## Initial Deployment
 
 ```bash
 # 1. Upload your app code to /home/ubuntu/cardlabsv3.0
@@ -13,7 +13,7 @@ chmod +x deploy_advanced.sh
 ./deploy_advanced.sh
 ```
 
-## 📝 Essential Commands
+## Essential Commands
 
 ### Service Management
 ```bash
@@ -163,7 +163,7 @@ htop  # if installed
 ps aux | grep gunicorn
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Service Won't Start
 ```bash
@@ -218,7 +218,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart fastapi
 ```
 
-## 📊 Monitoring
+## Monitoring
 
 ### Check if App is Responding
 ```bash
@@ -243,7 +243,7 @@ sudo netstat -tulpn | grep :8000
 sudo netstat -an | grep :8000 | wc -l
 ```
 
-## 🔐 Security
+## Security
 
 ### Firewall Setup
 ```bash
@@ -271,7 +271,7 @@ sudo systemctl restart fastapi
 sudo grep "Failed password" /var/log/auth.log | tail -20
 ```
 
-## 📁 Important File Locations
+## Important File Locations
 
 ```
 /home/ubuntu/cardlabsv3.0/          # Application directory
@@ -287,7 +287,7 @@ sudo grep "Failed password" /var/log/auth.log | tail -20
 /etc/letsencrypt/live/              # SSL certificates
 ```
 
-## 🔄 Backup & Restore
+## Backup & Restore
 
 ### Full Backup
 ```bash
@@ -312,7 +312,7 @@ sudo -u postgres psql cardlabs < ~/backup_db_20240101.sql
 tar -xzf ~/backup_app_20240101.tar.gz -C /
 ```
 
-## 💡 Tips
+## Tips
 
 1. **Always check logs first** when troubleshooting
 2. **Test changes** before restarting in production
@@ -322,7 +322,7 @@ tar -xzf ~/backup_app_20240101.tar.gz -C /
 6. **Use environment variables** for sensitive data
 7. **Set up monitoring** with tools like Datadog, New Relic, or simple cron jobs
 
-## 🆘 Emergency Recovery
+## Emergency Recovery
 
 ### App is Down - Quick Fix
 ```bash
